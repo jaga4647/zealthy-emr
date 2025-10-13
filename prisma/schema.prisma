@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Patient {
+  id            Int             @id @default(autoincrement())
+  fullName      String
+  email         String           @unique
+  password      String
+  age           Int?
+  appointments  Appointment[]
+  prescriptions Prescription[]
+  createdAt     DateTime         @default(now())
+}
+
+model Appointment {
+  id          Int       @id @default(autoincrement())
+  patientId   Int
+  provider    String
+  date        DateTime
+  repeat      String?
+  repeatEnd   DateTime?
+  createdAt   DateTime  @default(now())
+
+  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Prescription {
+  id              Int       @id @default(autoincrement())
+  patientId       Int
+  medication      String
+  dosage          String
+  quantity        Int
+  refillDate      DateTime
+  refillSchedule  String?
+  createdAt       DateTime  @default(now())
+
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model AllowedMedication {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  dosages  String  // comma-separated list like "200mg,400mg,600mg"
+}
