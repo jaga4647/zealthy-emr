@@ -1,7 +1,13 @@
+// app/health/route.ts
 export async function GET() {
-  return Response.json({
-    status: "ok",
-    message: "Server and database are awake 🚀",
-    time: new Date().toISOString(),
-  });
+  return new Response(
+    JSON.stringify({
+      status: "ok",
+      message: "Server is running",
+      time: new Date().toISOString(),
+    }),
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
