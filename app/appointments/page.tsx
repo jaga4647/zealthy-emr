@@ -1,63 +1,118 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface Appointment {
+  id: number;
+  provider: string;
+  date: string;
+  repeat?: string;
+  repeatEnd?: string;
+}
 
 export default function AppointmentsPage() {
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const patient = JSON.parse(localStorage.getItem("patient") || "null");
-    if (!patient) {
-      window.location.href = "/";
-    } else {
-      fetch(`/api/appointments?patientId=${patient.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          // Sort by date ascending (nearest first)
-          const sorted = data.sort(
-            (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()
-          );
-          setAppointments(sorted.slice(0, 5)); // Show only next 5 upcoming
-        })
-        .finally(() => setLoading(false));
-    }
-  }, []);
+    const stored = localStorage.getItem("patient");
+    const patient = stored ? JSON.parse(stored) : null;
 
-  if (loading)
+    if (!patient || !patient.email) {
+      router.push("/");
+      return;
+    }
+
+    async function fetchAppointments() {
+      try {
+        const res = await fetch(`/api/appointments?email=${encodeURIComponent(patient.email)}`);
+        const data = await res.json();
+        
+        if (Array.isArray(data)) {
+          // Filter for next 3 months
+          const now = new Date();
+          const threeMonthsFromNow = new Date();
+          threeMonthsFromNow.setMonth(now.getMonth() + 3);
+          
+          const filtered = data.filter((a: Appointment) => {
+            const apptDate = new Date(a.date);
+            return apptDate >= now && apptDate <= threeMonthsFromNow;
+          });
+          
+          // Sort by date (nearest first)
+          filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          
+          setAppointments(filtered);
+        }
+      } catch (error) {
+        console.error("Failed to fetch appointments:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAppointments();
+  }, [router]);
+
+  if (loading) {
     return (
-      <p className="text-center mt-10 text-gray-500 text-lg">Loading your appointments...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading appointments...</div>
+      </div>
     );
+  }
 
   return (
-    <main className="min-h-screen p-8 bg-gradient-to-b from-blue-50 to-gray-50">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-6 flex items-center justify-center gap-2">
-          📅 Upcoming Appointments
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+      <div className="max-w-5xl mx-auto">
+        <Link href="/patient" className="text-blue-600 hover:underline mb-6 inline-block">
+          ← Back to Dashboard
+        </Link>
 
-        <section className="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
-          {appointments.length > 0 ? (
-            <ul className="list-none divide-y divide-gray-200">
-              {appointments.map((a, index) => (
-                <li key={`${a.id}-${index}`} className="py-3">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                    <span className="font-semibold text-gray-800">
-                      {a.provider}
-                    </span>
-                    <span className="text-gray-600 text-sm">
-                      {new Date(a.date).toLocaleString()}
+        <h1 className="text-4xl font-bold text-blue-600 mb-2">📅 All Appointments</h1>
+        <p className="text-gray-600 mb-8">Showing all appointments for the next 3 months</p>
+
+        {appointments.length === 0 ? (
+          <div className="bg-white shadow-lg rounded-xl p-8 text-center">
+            <p className="text-gray-500 text-lg">No appointments scheduled in the next 3 months.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {appointments.map((a) => (
+              <div key={a.id} className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-gray-800">{a.provider}</h3>
+                    <p className="text-gray-600 mt-2 text-lg">
+                      📆 {new Date(a.date).toLocaleString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    {a.repeat && a.repeat !== "none" && (
+                      <p className="text-blue-600 mt-2 text-sm">
+                        🔄 Repeats: {a.repeat}
+                        {a.repeatEnd && ` until ${new Date(a.repeatEnd).toLocaleDateString()}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="ml-4">
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      {Math.ceil((new Date(a.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
                     </span>
                   </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 text-center py-6">
-              No upcoming appointments scheduled.
-            </p>
-          )}
-        </section>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </main>
+    </div>
   );
 }

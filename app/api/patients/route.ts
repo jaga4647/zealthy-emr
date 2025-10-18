@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // ✅ make sure this path exists
+import { prisma } from "@/lib/db";
 
 // 🩺 Get all patients
 export async function GET() {
   try {
-    const patients = await prisma.patient.findMany();
+    const patients = await prisma.patient.findMany({
+      orderBy: { createdAt: "desc" },
+    });
     return NextResponse.json(patients || []);
   } catch (error) {
     console.error("GET /patients failed:", error);
@@ -49,17 +51,6 @@ export async function DELETE(req: Request) {
 
     if (!id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
-    }
-
-    // Check if patient has related appointments/prescriptions
-    const relatedAppts = await prisma.appointment.findMany({ where: { patientId: id } });
-    const relatedRx = await prisma.prescription.findMany({ where: { patientId: id } });
-
-    if (relatedAppts.length > 0 || relatedRx.length > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete patient due to existing related data" },
-        { status: 400 }
-      );
     }
 
     await prisma.patient.delete({ where: { id } });
