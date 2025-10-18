@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
+  const id = params.id;
+  
   try {
-    const data = await req.json();
-    const id = Number(params.id);
+    const data = await request.json();
 
     const updated = await prisma.appointment.update({
-      where: { id },
+      where: { id: Number(id) },
       data: {
         provider: data.provider,
         date: new Date(data.date),

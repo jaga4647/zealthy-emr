@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
+  const id = params.id;
+  
   try {
     const patient = await prisma.patient.findUnique({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
     });
 
     if (!patient) {

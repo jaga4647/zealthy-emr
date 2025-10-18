@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
+import Link from "next/link";  // ADD THIS LINE
+import Navbar from "../../../components/Navbar";
 
 interface Patient {
   id: number;

@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
+  const id = params.id;
+  
   try {
     const prescription = await prisma.prescription.findUnique({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
     });
 
     if (!prescription) {
@@ -22,15 +25,17 @@ export async function GET(
 }
 
 export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
+  const id = params.id;
+  
   try {
-    const data = await req.json();
-    const id = Number(params.id);
+    const data = await request.json();
 
     const updated = await prisma.prescription.update({
-      where: { id },
+      where: { id: Number(id) },
       data: {
         medication: data.medication,
         dosage: data.dosage,
